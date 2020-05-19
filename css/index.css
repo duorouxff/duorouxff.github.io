@@ -28,7 +28,7 @@ body {
   z-index: -999;
   width: 100%;
   height: 100%;
-  background: ;
+  background: https;
   background-attachment: local;
   background-position: center;
   -webkit-background-size: cover;
@@ -133,7 +133,7 @@ table td {
 #site-name,
 #aside_content .author-info__name,
 #aside_content .author-info__description {
-  font-family: Titillium Web, PingFang SC, Hiragino Sans GB, "Microsoft YaHei", Helvetica Neue, Helvetica, Arial, sans-serif;
+  font-family: '"Titillium Web",Lato,PingFang SC, Hiragino Sans GB, "Microsoft JhengHei", "Microsoft YaHei", Helvetica Neue, Helvetica, Arial, sans-serif';
 }
 .is_right {
   text-align: right;
@@ -316,6 +316,13 @@ canvas:not(#ribbon-canvas),
   -o-animation: scroll-down-effect 1.5s infinite;
   -ms-animation: scroll-down-effect 1.5s infinite;
   animation: scroll-down-effect 1.5s infinite;
+}
+.avatar-img {
+  -webkit-animation: avatar_turn_around 2s linear infinite;
+  -moz-animation: avatar_turn_around 2s linear infinite;
+  -o-animation: avatar_turn_around 2s linear infinite;
+  -ms-animation: avatar_turn_around 2s linear infinite;
+  animation: avatar_turn_around 2s linear infinite;
 }
 .reward-main {
   -webkit-animation: donate_effcet 0.3s 0.1s ease both;
@@ -1745,6 +1752,65 @@ blockquote footer cite:before {
   background: #e6ebf1;
   color: #90a4ae;
   font-size: 14px;
+}
+#nav.error-no-found {
+  display: -webkit-box;
+  display: -moz-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: box;
+  display: flex;
+  -webkit-box-orient: vertical;
+  -moz-box-orient: vertical;
+  -o-box-orient: vertical;
+  -webkit-flex-direction: column;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  -webkit-box-pack: center;
+  -moz-box-pack: center;
+  -o-box-pack: center;
+  -ms-flex-pack: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  height: 100vh;
+}
+#nav.error-no-found:before {
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  content: '';
+}
+#nav.error-no-found #error_info {
+  position: absolute;
+  padding: 0 4rem;
+  width: 100%;
+  letter-spacing: 3px;
+  line-height: 1;
+}
+#nav.error-no-found #error_info #error_title,
+#nav.error-no-found #error_info #error_subtitle {
+  margin: 0;
+  padding: 0;
+  color: #eee;
+  letter-spacing: 5px;
+  font-family: '"Titillium Web",Lato,PingFang SC, Hiragino Sans GB, "Microsoft JhengHei", "Microsoft YaHei", Helvetica Neue, Helvetica, Arial, sans-serif';
+}
+#nav.error-no-found #error_info #error_title {
+  font-size: 10rem;
+}
+#nav.error-no-found #error_info #error_subtitle {
+  font-size: 2rem;
+}
+@media screen and (max-width: 768px) {
+  #nav.error-no-found #error_info {
+    padding: 0 2rem;
+  }
+  #nav.error-no-found #error_info #error_title {
+    font-size: 7rem !important;
+  }
+  #nav.error-no-found #error_info #error_subtitle {
+    font-size: 1rem !important;
+  }
 }
 #aside_content {
   width: 25%;
