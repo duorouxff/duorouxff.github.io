@@ -218,12 +218,11 @@
 		$("[name=qjjssj]").text(getNowFormatDate()+' 21:30');
 		$("#zpimg").attr('src','https://z3.ax1x.com/2021/03/23/6Hn9js.png');
 		$("#zpimg").css("border-radius","25px");
-		while(true){
-		var obj = setInterval(function(){
-			  var sj = moment(new Date($.ajax({async: false}).getResponseHeader("Date"))).format('YYYY-MM-DD HH:mm:ss');
-			  $("[name=sj]").text(sj);
+
+		var obj = window.setInterval(function(){
+			  $("[name=sj]").text(getNowFormatDatess());
 		},999);
-		}
+		
 		$("#cx_btn").on("click",function(){//出校隐藏进校按钮
 			layer.open({
 				icon: 7,
@@ -305,6 +304,23 @@
         		strDate = '0' + strDate;
     		}
     		var currentdate = year + '-' + month + '-' + strDate;
+    		return currentdate;
+		}
+	function getNowFormatDatess() {
+    		var date = new Date();
+    		var year = date.getFullYear();
+    		var month = date.getMonth() + 1;
+    		var strDate = date.getDate();
+		var hhh = date.getHours();
+		var mmm = date.getMinutes();
+		var sss = date.getSeconds();
+    		if (month >= 1 && month <= 9) {
+        		month = '0' + month;
+    		}
+    		if (strDate >= 0 && strDate <= 9) {
+        		strDate = '0' + strDate;
+    		}
+    		var currentdate = year + '-' + month + '-' + strDate + ' '+hhh+':'+mmm+':'+sss;
     		return currentdate;
 		}
 	
