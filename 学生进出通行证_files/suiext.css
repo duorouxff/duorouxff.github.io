@@ -1,0 +1,210 @@
+.sui-fileupload[suiext='true'][charLength] .file-items .file-item a.wf-fileView{
+	display:inline-block;
+	white-space:nowrap;
+	text-overflow:ellipsis;
+	overflow:hidden;
+	float:left;
+}
+
+.sui-fileupload[suiext='true'][charLength] .file-items .file-item span.btn{
+	line-height:100%;
+}
+
+.orgTree{
+	display:block;
+}
+
+.orgTree .dropdown-tree{
+	width:100%;
+	height:335px;
+	display:none;
+	margin:0 5px 5px 0;
+	z-index:9999;
+}
+
+.orgTree .dropdown-tree>ul{
+	height:290px;
+	display:block;
+	overflow:auto;
+}
+
+.orgTree .sui-input{
+	cursor: pointer;
+}
+
+.orgTree .sui-input .input-group input{
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow: hidden;
+    padding-right: 16px !important;
+}
+
+.orgTree .sui-input .input-group span{
+	padding:6px 8px;
+}
+
+.orgTree .orgTree_detele_btn_div{
+	display:none;
+	position:absolute;
+	top:0;
+	right:54px;
+	z-index:999;
+}
+
+.orgTree .orgTree_detele_btn_div .orgTree_detele_btn{
+	color:#8c8c8c;
+	line-height:34px;
+}
+
+.ext-daterange,.ext-numrange{
+	position:relative;
+}
+
+.ext-daterange .left-component,.ext-numrange .left-component{
+	width:50%;
+	float:left;
+	padding-right:10px;
+}
+
+.ext-daterange .center-component,.ext-numrange .center-component{
+	position:absolute;
+	width:100%;
+	line-height:34px;
+	text-align:center;
+}
+
+.ext-daterange .right-component,.ext-numrange .right-component{
+	width:50%;
+	float:right;
+	padding-left:10px;
+}
+
+.ext-numrange .sui-input{
+	position:relative;
+	z-index:1
+}
+
+.ext-daterange .sui-input input,.ext-date .sui-input input{
+	border-top-left-radius:4px !important;
+	border-bottom-left-radius:4px !important;
+}
+
+.ext-radio .ext-radio-ul{
+	padding-left:0;
+	margin-bottom:0;
+	list-style:none;
+}
+
+.ext-radio .ext-radio-ul li{
+	float:left;
+	cursor:pointer;
+	position:relative;
+	text-align:center;
+	z-index:0;
+	height:34px;
+	margin:0 -0.5px;
+	min-width:40px;
+	line-height:32px;
+	border:1px solid #ddd;
+	overflow-x:hidden;
+	white-space:nowrap;
+	text-overflow:ellipsis;
+}
+
+.ext-radio .ext-radio-ul li.firstLi{
+	border-top-left-radius:4px;
+	border-bottom-left-radius:4px;
+}
+
+.ext-radio .ext-radio-ul li.lastLi{
+	border-top-right-radius:4px;
+	border-bottom-right-radius:4px;
+}
+
+.ext-radio .ext-radio-ul li.checked,.ext-radio .ext-radio-ul li:hover{
+	z-index:1;
+	color:#3f7976;
+	border-color:#3f7976 !important;
+}
+
+.ext-switch{
+	width: 44px;
+	height: 22px;
+    background-color: #dcdfe6;
+    border-radius: 11px;
+    position: relative;
+}
+
+.ext-switch[mode=editable]{
+	cursor: pointer;
+}
+
+.ext-switch[mode=disabled]{
+	cursor: no-drop;
+}
+
+.ext-switch.open{
+    background-color: #409eff;
+}
+
+.ext-switch:after{
+	content: "";
+	position: absolute;
+	top: 2px;
+	left: 1px;
+	border-radius: 100%;
+	-webkit-transition: all .3s;
+	transition: all .3s;
+	width: 18px;
+	height: 18px;
+	background-color: #fff;
+}
+
+.ext-switch.open:after{
+    left: 25px;
+}
+
+.ext_draft,.ext-closewindow,.ext-export{
+	display:inline-block;
+}
+
+.datepicker table tr td span.disabled,.datepicker table tr td span.disabled:hover{
+	color:#999;
+	cursor:no-drop;
+	text-decoration-line:line-through;
+}
+
+.daterangepicker .ranges .range_inputs .labelBtnClass{
+	display:none;
+}
+
+.export-progress-bar-dialog{
+	border-radius:15px;
+	overflow-x:auto;
+}
+
+.export-progress-bar-dialog .layui-layer-content{
+	padding:0;
+	min-height:30px !important;
+	line-height:30px;
+	text-align:center;
+}
+
+.export-progress-bar-dialog .export-progress-bar{
+    height:30px;
+    position:absolute;
+    background-color:#158cd5;
+	animation:move 0.8s linear infinite;
+    box-shadow:none;
+    background-image:linear-gradient(135deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
+}
+
+.export-progress-bar-dialog .export-progress-bar-text{
+	position:relative;
+	font-size:15px;
+}
+
+@-webkit-keyframes move{
+    0%{background-position:0 0;}
+    100%{background-position:40px 0;}
+}

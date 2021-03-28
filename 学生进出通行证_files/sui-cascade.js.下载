@@ -1,0 +1,264 @@
+;(function () {
+    var hasLoadMathJs = false
+
+    /*联动绑定*/
+    function bindCascade() {
+        var linkSource = $(this).attr('linkSource'),
+            name = $(this).attr('name'),
+            key = $(this).attr('linkKey') || name,
+            dataKey=$(this).attr('dataKey')||name
+        if (!name)
+            return
+        $('[name="' + linkSource + '"]').on('change', function (e, data) {
+            e.preventDefault()
+            var params = {},
+                $link = $('[name="' + name + '"]'),
+                domSui = getSui('[name="' + linkSource + '"]')
+            if (!$link.attr('linkSource')) {
+                return
+            }
+            if ($link.attr('isCascadeData')==='true') {
+                if (!data) {
+                    data = domSui.getConfig().properties.dataSource
+                }
+                var dataSource = getStaticData(data, dataKey, domSui.getValue())
+                $link.loadStaticCascadeData(false, dataSource)
+            } else {
+                if($link.attr('datamethod')==='entity'){
+                    var _reqParam={},_conditionObj={}
+                    _reqParam.data=[]
+                    _conditionObj.propertyName='["'+key+'"]'
+                    _conditionObj.propertyValue=domSui.getValue()
+                    _conditionObj.operate='EQ'
+                    _reqParam.data.push(_conditionObj)
+                    $link.loadSelectRemoteData(false, _reqParam)
+
+                }else{
+                    params.parentId = domSui.getValue()
+                    params[key] = domSui.getValue()
+                    $link.loadSelectRemoteData(false, params)
+                }
+
+            }
+        })
+    }
+
+    /*绑定公式计算*/
+    function bindCompute() {
+        var bindExp = ($(this).attr('bindExp') || '').split(','),
+            exp = $(this).attr('expression') || '',
+            name = $(this).attr('name')
+        $.each(bindExp, function (i, v) {
+            var _sui = getSui('[name="' + name + '"]')
+            /*配置默认值情况下:不会触发change事件*/
+            var result = compute(bindExp, exp)
+            _sui != null ? _sui.setValue(result) : ''
+            /*change事件*/
+            $('[name="' + v + '"]').on('change', function () {
+                var attrBindExp = $('[name="' + name + '"]').attr('bindExp') || ''
+                if (!attrBindExp)
+                    return
+                var result = compute(bindExp, exp)
+                _sui != null ? _sui.setValue(result) : ''
+            })
+        })
+
+    }
+
+    function compute(bind, exp) {
+        var valArr = []
+        $.each(bind, function (i, v) {
+            var selector = '[name="' + v + '"]';
+            if($(selector).length == 0){
+                selector = '[name2="' + v + '"]';
+            }
+            var _sui = getSui(selector),
+                val = _sui != null ? _sui.getValue() + '' : '';
+            // 兼容起止时间控件绑定两个字段不能计算问题
+            if($(selector).attr('name2')){
+                val = _sui != null ? _sui.getValue(): '';
+                if(val && val[v]){val = val[v];}
+            }
+            valArr.push(val)
+        });
+        $.each(bind, function (i, v) {
+            var value = valArr[i] ? valArr[i] : 0
+            exp = exp.replace(new RegExp(v, 'g'), '"'+value+'"');
+        });
+        exp = exp.replace(new RegExp('\'','g'),'"');
+        var result = math.eval(exp);
+        result = isNaN(result) ? 0 : result;
+        return result
+    }
+
+    $.fn.initCascade = function () {
+        $('[linkSource]', this).each(function () {
+            bindCascade.call(this)
+        })
+        if ($('[bindExp]', this).length > 0) {
+            var _this = this
+            if (!hasLoadMathJs) {
+                hasLoadMathJs = true;
+                $('[bindExp]', _this).each(function () {
+                    if($(this).attr('iscomputed') == 'true'){
+                        bindCompute.call(this)
+                    }
+                })
+                // A.use(window.__basePath + '_libs/coreplus/math.min.js', function () {
+                //     hasLoadMathJs = true;
+                //     $('[bindExp]', _this).each(function () {
+                //         bindCompute.call(this)
+                //     })
+                // });
+                // loadScript(window.__basePath + '_libs/coreplus/math.min.js', function () {
+                //     hasLoadMathJs = true
+                //     $('[bindExp]', _this).each(function () {
+                //         bindCompute.call(this)
+                //     })
+                // })
+            } else {
+                $('[bindExp]', this).each(function () {
+                    if($(this).attr('iscomputed') == 'true'){
+                        bindCompute.call(this)
+                    }
+                })
+            }
+        }
+
+    }
+    $.fn.removeLink = function () {
+        $(this).removeAttr('linkSource')
+    }
+    $.fn.loadStaticCascadeData = function (config, data) {
+        var $dom = $(this)
+        var domSui = getSui(this)
+        if (!config) {
+            config = domSui.getConfig()
+        } else {
+            data = config.cascade.cascadeData
+        }
+        var dataSource = data || []
+        config.properties.dataSource = dataSource
+        if (!config.value) {
+            config.value = dataSource.length === 0 ? '' : dataSource[0].value
+        }
+        domSui.setConfig(config)
+        setTimeout(function () {
+            $dom.trigger('change', [data])
+        }, 100)
+    }
+    $.fn.loadSelectRemoteData = function (config, extraParams) {
+        console.log('select remote')
+        var $dom = $(this)
+        var domSui = getSui(this)
+        if (!config) {
+            config = domSui.getConfig()
+        }
+        var ajaxConfig = {
+            type: config.properties.method || 'get',
+            contentType: "text/json"
+        }
+        config.properties.reqParams = $.extend(config.properties.reqParams, extraParams)
+        var url = config.properties.dataUrl,
+            dataSrc = config.properties.dataSrc,
+            textField = config.properties.textField,
+            idField = config.properties.idField,
+            reqParams = config.properties.reqParams
+        if (config.properties.entityType) {
+            reqParams.type = 'sdo:' + config.properties.entityType
+            var queryCondition = reqParams.data||[]
+            $.each(queryCondition, function (i, v) {
+                v.propertyValue = Coreplus.getInitValueByMatchReg(v.propertyValue)
+            })
+            reqParams = JSON.stringify(reqParams)
+        }
+
+        $.ajax({
+            type: ajaxConfig.type,
+            url: url,
+            contentType: ajaxConfig.contentType,
+            data: reqParams,
+            success: function (data) {
+                var results = getResultData(dataSrc, data, idField, textField)
+                $dom.trigger('loadDone',[results])
+                config.properties.dataSource = results;
+                config.value=domSui.getConfig()?domSui.getConfig().value:''
+                if (!config.value) {
+                    config.value = results.length === 0 ? '' : results[0][idField]
+                }
+                domSui.setConfig(config)
+                $dom.trigger('change')
+            },
+            error: function () {
+
+            }
+        })
+    }
+    var getStaticData = function (data, field, parentValue) {
+        var _data = []
+        if (field) {
+            $.each(data, function (i, v) {
+                if (v.value === parentValue) {
+                    _data = v[field]
+                    return false
+                }
+            })
+        } else {
+            _data = data
+        }
+        return _data
+    }
+    //按格式封装接口数据
+    var getResultData = function (dataSrc, data, idField, textField) {
+        var result = []
+        if (!data) {
+            return result
+        }
+        var dataSrc = dataSrc.split('.')
+        $.each(dataSrc, function (i, v) {
+            data = data[v] || []
+        })
+        $.each(data, function (i, v) {
+            var obj = {}
+            obj.value = v[idField]
+            obj.name = v[textField]
+            result.push(obj)
+        })
+        return result
+    }
+
+    function loadScript(src, callback) {
+        var script = document.createElement('script'),
+            head = document.getElementsByTagName('head')[0];
+        script.type = 'text/javascript';
+        script.charset = 'UTF-8';
+        script.src = src;
+        if (script.addEventListener) {
+            script.addEventListener('load', function () {
+                callback();
+            }, false);
+        } else if (script.attachEvent) {
+            script.attachEvent('onreadystatechange', function () {
+                var target = window.event.srcElement;
+                if (target.readyState == 'loaded') {
+                    callback();
+                }
+            });
+        }
+        head.appendChild(script);
+    }
+
+    function getSui(selector) {
+        var _sui = $(selector).sui() || null
+        return _sui != null && _sui.length > 0 ? _sui[0] : _sui
+    }
+
+    //转换数据
+    var parseJSON = function (str, jsStyle) {
+        if (!jsStyle) {
+            return $.parseJSON(str);
+        } else {
+            return eval('(function(){return ' + str + '})()');
+        }
+    }
+})()

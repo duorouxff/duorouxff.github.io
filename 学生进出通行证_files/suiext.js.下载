@@ -1,0 +1,1438 @@
+(function (){
+	loadStyle(__contextPath+'/work/process/css/suiext.css');
+	loadScript(__contextPath+'/work/process/js/bignumber/bignumber.js');
+	var dataSourceArr={};
+	var businessDataArr={};
+	var suiElement=".sui-input,.sui-select,.sui-multiselect,.sui-date,.sui-fileupload,.sui-daterange,.sui-editor,.sui-hide,.sui-rating,.sui-selectpersonneltool,.sui-opinion,.sui-opinionone,.sui-form";
+	window.SuiExt={
+		init : function(){
+			initExtDraftBtn();
+			initExtExportBtn();
+			initExtCloseWindowBtn();
+			loadPromptBox();
+			$.fn.extend({
+				ext:function(){
+					if(this.attr("suiext")=="true"){
+						return this[0].extConfig;
+					}
+				}
+			});
+		},
+		hideNode : function(node1,node2){
+			var hides=[];
+			if((typeof node1=='string')&&node1.constructor==String&&(typeof node2=='string')&&node2.constructor==String){
+				hides.push({from : node1,to : node2});
+			}else if((typeof node1=='object')&&node1.constructor==Array&&!node2){
+				hides=node1;
+			}
+			var suiDom = $(".sui-participates,.sui-moreparticipates,.sui-newparticipants");
+			setConfigProperty(suiDom,"hides",hides);
+		},
+		nodeHides : function(nodes){
+			var activityId=wf2.workflow.activity.id;
+			var hides=[];
+			if((typeof nodes=='string')&&nodes.constructor==String){
+				hides.push({from:activityId,to:nodes});
+			}else{
+				nodes.forEach(function(node){
+					hides.push({from:activityId,to:node});
+				});
+			}
+			this.hideNode(hides);
+		},
+		setSameOrg : function(orgid,go){
+			var suiDom = $(".sui-participates,.sui-moreparticipates,.sui-newparticipants");
+			setConfigProperty(suiDom,"partiesFilter",function(parts, from, to) {
+				if((go&&to==go)||!go){
+	  				var empArr=[];
+	  				parts.forEach(function (part){
+		  				if(part.orgid==orgid){
+		  					empArr.push(part);
+		  				}
+		  			});
+		  			return empArr;
+	  			}else{
+	  				return parts;
+	  			}
+			});
+		},
+		addOperator : function(operator,go){
+			var operatorArr=[];
+			if((typeof operator=='object')&&operator.constructor==Object){
+				operatorArr.push(operator);
+			}else if((typeof operator=='object')&&operator.constructor==Array){
+				operatorArr=operator;
+			}
+			var suiDom = $(".sui-participates,.sui-moreparticipates,.sui-newparticipants");
+			setConfigProperty(suiDom,"partiesFilter",function(parts, from, to) {
+				if((go&&to==go)||!go){
+					return parts&&parts.length>0?parts.concat(operatorArr):operatorArr;
+				}else if(go&&to!=go){
+					return parts;
+				}
+			});
+		},
+		setOperator : function(operator,go){
+			var operatorArr=[];
+			if((typeof operator=='object')&&operator.constructor==Object){
+				operatorArr.push(operator);
+			}else if((typeof operator=='object')&&operator.constructor==Array){
+				operatorArr=operator;
+			}
+			var suiDom = $(".sui-participates,.sui-moreparticipates,.sui-newparticipants");
+			setConfigProperty(suiDom,"partiesFilter",function(parts, from, to) {
+				if((go&&to==go)||!go){
+					return operatorArr;
+				}else if(go&&to!=go){
+					return parts;
+				}
+			});
+		},
+		switchoverParticipates : function(wfConfig,activityIds){
+			var bool=false;
+			var activity=this.getWorkflow(wfConfig).activity;
+			var activityId=activity?activity.id:"";
+			activityIds.split(",").forEach(function (str){
+				if(activityId==str){
+					bool=true;
+				}
+			});
+			if(bool&&$(".sui-participates").length>0){
+				$(".sui-participates").removeClass("sui-participates").addClass("sui-moreparticipates").attr("showType","2");
+			}else if(bool&&$(".sui-moreparticipates").length>0){
+				$(".sui-moreparticipates").removeClass("sui-moreparticipates").addClass("sui-participates").removeAttr("showType");
+			}
+		},
+		post : function(url,obj,callback,async,headers){
+			return $.ajax({
+				url : url,
+				type : 'post',
+				data : obj?JSON.stringify(obj):null,
+				async: async==false?false:true,
+				headers:headers,
+				contentType : "text/json",
+				success : function(data) {
+					if(callback&&(typeof callback=='function')&&callback.constructor==Function){
+						callback(data);
+					}
+				}
+			});
+		},
+		getCurrentTime : function(format){
+			var time="";
+			this.post("com.sudytech.work.process.processUtil.getCurrentTime.biz.ext",{
+				format : format,
+			},function(data){
+				time=data.result;
+			},false);
+			return time;
+		},
+		getLoginUser : function(callback,async){
+			this.post("com.sudytech.work.process.processUtil.getLoginUser.biz.ext",null,callback,async);
+		},
+		getEmpById : function(empid,callback,async){
+			this.post("com.sudytech.work.process.processUtil.getEmpById.biz.ext",{empid:empid},callback,async);
+		},
+		loadEmpById : function(empid,callback,async){
+			this.post("com.sudytech.portalone.base.db.queryBySqlWithoutPagecond.biz.ext",{
+				params : {userId:empid},
+				querySqlId : "com.sudytech.portalone.base.util.queryEmployeeById"
+			},callback,async);
+		},
+		getWorkflow : function(wfConfig){
+			var workflow="";
+			this.post("com.sudytech.portalone.base.workflow.queryEnv.biz.ext",{
+                workItemId: wfConfig.workItemId,
+                process: wfConfig.process,
+                processInstId: wfConfig.processInstId
+            },function (data){
+            	workflow=data.data;
+            },false);
+			return workflow;
+		},
+		clear : function(domArr){
+			domArr.each(function (i,e){
+				if($(e).sui()&&!$(e).hasClass('sui-form')){
+					$(e).sui().setValue("");
+				}else{
+					domArr.find(suiElement).each(function (il,el){
+						if($(el).hasClass("sui-select")&&$(el).attr("selectstyle")=="radio"){
+							$(el).find("input:checked").iCheck('uncheck');
+						}else{
+							$(el).sui().setValue("");
+						}
+					});
+				}
+			});
+			this.removeValidateClass(domArr);
+		},
+		merge : function (entity1,entity2){
+            var temp = $.extend({},entity2);
+            return $.extend(temp,entity1);
+        },
+		render : function(formDom,data){
+			for(key in data){
+				var suiDom=formDom.find("div[name='"+key+"'],div[name='"+key.toLowerCase()+"']");
+				if(suiDom.length>0){
+					suiDom.each(function(i,e){
+						if($(e).attr("sui")=="true"){
+							var value=data[key];
+							if(value===undefined||value===null){
+								value=="";
+							}
+							$(e).sui().setValue(value);
+						}
+					});
+				}
+			}
+			this.removeValidateClass(formDom);
+		},
+		loadDict : function(types,callback,async){
+			this.post("com.sudytech.portalone.base.ui.queryDict.biz.ext",{dictTypes:types},callback,async);
+		},
+		saveCascade : function(obj,callback){
+			this.post('com.sudytech.portalone.base.db.saveEnityCascade.biz.ext',obj,callback);
+		},
+		upateCascade : function (obj,callback){
+			this.post('com.sudytech.portalone.base.db.updateEntityCascade.biz.ext',obj,callback);
+		},
+		saveOrUpdate : function (entity,callback){
+			this.post("com.sudytech.portalone.base.db.saveOrUpdate.biz.ext",{entity:entity},callback);
+		},
+		batchSaveOrUpdate : function(entity,callback){
+			var entityArr=[];
+			if((typeof entity=='object')&&entity.constructor==Object){
+				entityArr.push(entity);
+			}else if((typeof entity=='object')&&entity.constructor==Array){
+				entityArr=entity;
+			}
+			this.post("com.sudytech.portalone.base.db.batchSaveOrUpdate.biz.ext",{entities:entityArr},callback);
+		},
+		del : function(entity,callback){
+			var entityArr=[];
+			if((typeof entity=='object')&&entity.constructor==Object){
+				entityArr.push(entity);
+			}else if((typeof entity=='object')&&entity.constructor==Array){
+				entityArr=entity;
+			}
+			this.post("com.sudytech.portalone.base.db.batchDelete.biz.ext",{entity:entityArr},callback);
+		},
+		delCascade : function(entity,callback){
+			var entityArr=[];
+			if((typeof entity=='object')&&entity.constructor==Object){
+				entityArr.push(entity);
+			}else if((typeof entity=='object')&&entity.constructor==Array){
+				entityArr=entity;
+			}
+			this.post("com.sudytech.portalone.base.db.batchDeleteCascade.biz.ext",{entity:entityArr},callback);
+		},
+		terminateProcess : function(param,callback,async){
+			this.post("com.sudytech.portalone.base.workflow.terminationProcessInst.biz.ext",{param:param.processInstIdArr,lczt:param.lczt?{key:"lczt",value:param.lczt}:null},callback,async);
+		},
+		exportExcel : function(url,businessCode,params,maxLine,maxSheet){
+			var loadIndex=layer.open({
+				type:0,
+				title:false,
+				closeBtn:0,
+				btn:false,
+				content:'<div class="export-progress-bar progress-bar progress-bar-striped"></div><div class="export-progress-bar-text">正在执行，请耐心等待... ...</div>',
+				success:function(e){
+					$(e).addClass("export-progress-bar-dialog");
+				}
+			});
+			var progressKey=loadIndex+"-"+Math.floor(Math.random()*1000);
+	 		this.post(url,{
+	 			businessCode:businessCode,
+	 			params:params,
+	 			maxLine:maxLine||10000,
+	 			maxSheet:maxSheet||3
+	 		},function(data){
+	 			layer.close(loadIndex);
+	 			loadIndex=null;
+	 			if(data.uuid){
+		 			window.location=__contextPath+"/work/process/processManager/downExcel.jsp?uuid="+data.uuid;
+	 			}else{
+	 				alert('导出失败！');
+	 			}
+	 		},true,{progressKey:progressKey});
+	 		
+	 		var intervalId=null;
+	 		intervalId=window.setInterval(function(){
+	 			SuiExt.post("com.sudytech.work.process.exportconfig.exportService.getProgress.biz.ext",null,function(data){
+	 				if(data.total>0){
+	 					$(".export-progress-bar").css("width",Number(data.loaded||0)*100/Number(data.total)+"%");
+	 					$(".export-progress-bar-text").html((data.loaded||0)+"/"+data.total);
+	 					if(data.loaded==data.total){
+	 						window.clearInterval(intervalId);
+	 						window.setTimeout(function(){
+	 							$(".export-progress-bar-text").html("准备下载... ...");
+	 						},1000);
+	 					}
+	 				}
+	 				if(loadIndex==null){
+	 					window.clearInterval(intervalId);
+	 				}
+	 			},true,{progressKey:progressKey});
+	 		},1000);
+		},
+		setRequire : function(domArr,bool){
+			domArr.each(function (i,e){
+				if($(e).sui()&&!$(e).hasClass('sui-form')){
+					setConfigProperty($(e),"validate.require",bool);
+				}else{
+					domArr.find(suiElement).each(function (il,el){
+						setConfigProperty($(el),"validate.require",bool);
+					});
+				}
+			});
+		},
+		setValidate : function(domArr,validate){
+			domArr.each(function (i,e){
+				if($(e).sui()&&!$(e).hasClass('sui-form')){
+					setConfigProperty($(e),"validate",validate);
+				}else{
+					domArr.find(suiElement).each(function (il,el){
+						setConfigProperty($(el),"validate",validate);
+					});
+				}
+			});
+		},
+		findInvalid : function(){
+			var invalids=[];
+			$(suiElement).each(function(i,e){
+				if(!$(e).sui().validate()){
+					invalids.push(e);
+				}
+			});
+			return $(invalids);
+		},
+		removeValidate : function(domArr){
+			this.setValidate(domArr,"");
+		},
+		removeValidateClass : function(domArr){
+			domArr.each(function (i,e){
+				if($(e).sui()&&!$(e).hasClass('sui-form')&&!$(e).hasClass('sui-datatable')){
+					$(e).removeClass(SUI.Util.validateClass()).tooltip('hide');
+				}else{
+					domArr.find(suiElement).removeClass(SUI.Util.validateClass()).tooltip('hide');
+				}
+			});
+		},
+		setEditable : function(domArr){
+			setArrMode(domArr,'editable');
+		},
+		setReadOnly : function(domArr){
+			setArrMode(domArr,'readOnly');
+		},
+		setHide : function(domArr){
+			setArrMode(domArr,'hide');
+		},
+		setConfigProperty : function (suiDom,property,value){
+			setConfigProperty(suiDom,property,value);
+		},
+		loadScript : function(url){
+			loadScript(url);
+		},
+		loadStyle : function(href){
+			loadStyle(href);
+		},
+		loadStyleString : function(cssStr){
+			var style=document.createElement("style");
+	        style.type="text/css";
+	        try{
+	            style.appendChild(document.createTextNode(cssStr));
+	        }catch(ex){
+	            style.styleSheet.cssText=cssStr;
+	        }
+	        document.getElementsByTagName("head")[0].appendChild(style);
+		},
+		bindDragEvent : function(dom,box,dragDom){
+			bindDragEvent(dom,box,dragDom);
+		},
+		timeDiff : function(time1,time2){
+			return (moment(time2)._d.getTime()-moment(time1)._d.getTime())/1000/60/60/24;
+		},
+		fomatMoney : function(value){
+			return (value+"").replace(/(?=(\B(\d{3})+\.\d{2})$)/g,",");
+		},
+		fomatNumFloor : function(src,pre){
+			return fomatNum(src,pre,1);
+		},
+		fomatNumRound : function(src,pre){
+			return fomatNum(src,pre);
+		},
+		numToChinese : function(money){
+			return numToChinese(money);
+		},
+		closeWindow : function(reload){
+			var from=getParameter("f");
+			var appload=getParameter("appload")||getParameter("appLoad");
+			var workItemId=getParameter("workItemID");
+			var processInstId=getParameter("processInstId");
+			if(appload=="0"&&from=="m"){//首页关闭layer
+				if(reload){
+					reloadWindow();
+				}else{
+					closeWindow();
+				}
+			}else if(appload=="0"&&from=="g"){//关闭弹窗
+				closeWindow(-1);
+			}else if(appload=="0"&&from=="wechat"){
+				history.go(-1);
+			}else if(appload=="0"&&!from){
+				if(workItemId||processInstId){
+					history.go(-1);
+				}else if(reload){
+					reloadWindow(0);
+				}
+			}else if(appload=="0"&&from=="app"){//关闭弹窗
+				if(document.referrer==null||document.referrer==""){
+					iPortal.closeWindow();
+				}else{
+					var rander =+ new Date();
+					window.location.href=changeURLArg(document.referrer,"v",rander) ;
+				}
+			}else{//直接关闭
+				closeWindow(true);
+			}
+		},
+		parse : function (domArr){
+			if(domArr){
+				var str="<div>";
+				$(domArr).each(function (i,e){
+					str+=e.outerHTML;
+				});
+				str+="</div>";
+				loadDict($(str).find('.wf-dict'));
+				loadBusinessData($(str).find(".sui-select[businessdata]"));
+				if((typeof domArr=='string')&&domArr.constructor==String){
+					domArr=$(domArr);
+					var domTemp=$("<div></div>").append(domArr);
+					initOrgTree(domTemp.find(".orgTree"));
+					initExtNumrange(domTemp.find(".ext-numrange"));
+					initExtDaterange(domTemp.find(".ext-daterange"));
+					initExtDate(domTemp.find(".ext-date"));
+					initExtRadio(domTemp.find(".ext-radio"));
+					initExtSwitch(domTemp.find(".ext-switch"));
+					SUI.init(null,domTemp);
+					extSuiDom(domTemp.find(suiElement));
+				}else{
+					domArr.each(function (i,e){
+						if($(e).attr("sui")=="true"){
+							if($(e).hasClass('sui-form')){
+								initOrgTree($(e).find(".orgTree"));
+								initExtNumrange($(e).find(".ext-numrange"));
+								initExtDaterange($(e).find(".ext-daterange"));
+								initExtDate($(e).find(".ext-date"));
+								initExtRadio($(e).find(".ext-radio"));
+								initExtSwitch($(e).find(".ext-switch"));
+								extSuiDom($(e).find(suiElement));
+							}else {
+								extSuiDom($(e));
+							}
+						}else{
+							if($(e).children().length>0){
+								if($(e).hasClass('sui-form')){
+									SUI.build($(e).get(0));
+								}
+								initOrgTree($(e).find(".orgTree"));
+								initExtNumrange($(e).find(".ext-numrange"));
+								initExtDaterange($(e).find(".ext-daterange"));
+								initExtDate($(e).find(".ext-date"));
+								initExtRadio($(e).find(".ext-radio"));
+								initExtSwitch($(e).find(".ext-switch"));
+								extSuiDom($(e).find(suiElement));
+							}else{
+								if($(e).hasClass("orgTree")){
+									initOrgTree($(e));
+								}else if($(e).hasClass("ext-numrange")){
+									initExtNumrange($(e));
+								}else if($(e).hasClass("ext-daterange")){
+									initExtDaterange($(e));
+								}else if($(e).hasClass("ext-date")){
+									initExtDate($(e));
+								}else if($(e).hasClass("ext-radio")){
+									initExtRadio($(e));
+								}else if($(e).hasClass("ext-switch")){
+									initExtSwitch($(e));
+								}else{
+									extSuiDom($(SUI.build($(e).get(0))));
+								}
+							}
+						}
+					});
+				}
+			}else{
+				loadDict($('.wf-dict'));
+				loadBusinessData($(".sui-select[businessdata]"));
+				initOrgTree($(".orgTree"));
+				initExtNumrange($(".ext-numrange"));
+				initExtDaterange($(".ext-daterange"));
+				initExtDate($(".ext-date"));
+				initExtRadio($(".ext-radio"));
+				initExtSwitch($(".ext-switch"));
+				extSuiDom($(suiElement));
+			}
+			return domArr;
+		}
+	};
+	
+	SuiExt.init();
+	
+	//创建日历对象
+	function creatDatepicker(e){
+		var format=($(e).attr("format")||"").toLowerCase();
+		if(format=="yyyy"){
+			return {
+				isDatepicker:true,
+	            startView: 'decade',
+	            minView: 'decade',
+	            format: 'yyyy',
+	            maxViewMode: 2,
+	            minViewMode:2,
+	            autoclose: true
+            };
+		}else if(format=="yyyy-mm"){
+			return {
+				isDatepicker:true,
+	            startView: '2',
+	            minView: '2',
+	            format: 'yyyy-mm',
+	            maxViewMode: 1,
+	            minViewMode:1,
+	            autoclose: true
+            };
+		}else{
+			var datepicker={
+				singleDatePicker: true,
+                timePicker: $(e).hasClass('datetime'),
+                timePickerSeconds: /ss/.test(format),
+                timePickerIncrement: 1,
+                locale: {
+                    format: $(e).attr("format")||"YYYY-MM-DD"
+                }
+	        };
+			if(!$(e).hasClass('datetime')){
+				datepicker.buttonClasses="labelBtnClass";
+			}
+			return datepicker;
+		}
+	}
+	
+	//初始化数字范围控件
+	function initExtNumrange(domArr){
+		var htmlStr='<div class="left-component">\
+						<div class="sui-input num-min" mode="editable" validate="{format:\'number\'}"></div>\
+					 </div>\
+					 <div class="center-component">至</div>\
+					 <div class="right-component">\
+						<div class="sui-input num-max" mode="editable" validate="{format:\'number\'}"></div>\
+				 	 </div>';
+		domArr.each(function(i,e){
+			$(e).attr("suiext",true).html(htmlStr);
+			SUI.init(null,$(e));
+			e.extConfig={
+				getValue:function(){
+					var minNum=$(e).find(".num-min").sui().getValue();
+					var maxNum=$(e).find(".num-max").sui().getValue();
+					return [minNum,maxNum];
+				},
+				setValue:function(value){
+					$(e).find(".num-min").sui().setValue(value?value[0]:"");
+					$(e).find(".num-max").sui().setValue(value?value[1]:"");
+					SuiExt.removeValidateClass($(e));
+				}
+			};
+		});
+	}
+	
+	//初始化时间范围控件
+	function initExtDaterange(domArr){
+		var htmlStr='<div class="time-div time-start-div left-component">\
+						<div class="input-group time-picker">\
+							<div class="sui-input time-start disabled" mode="editable"></div>\
+							<div class="input-group-addon"><i class="fa fa-calendar"></i></div>\
+						</div>\
+					 </div>\
+					 <div class="time-div time-connect center-component">至</div>\
+					 <div class="time-div time-end-div right-component">\
+						<div class="input-group time-picker">\
+							<div class="sui-input time-end disabled" mode="editable"></div>\
+							<div class="input-group-addon"><i class="fa fa-calendar"></i></div>\
+						</div>\
+				 	 </div>';
+		domArr.each(function(i,e){
+			var datepicker=creatDatepicker(e);
+			$(e).attr("suiext",true).html(htmlStr);
+			if($(e).attr("require")=="true"){
+				$(e).find(".sui-input").attr("validate","{'require':true}");
+			}else{
+				$(e).find(".sui-input").attr("validate","{'require':false}");
+			}
+			
+			SUI.init(null,$(e));
+			if(datepicker.isDatepicker){
+				$(e).find(".time-picker input").datepicker(datepicker).on('change',function(el){
+					var value = el.target.value;
+					if($(el.target).parent().hasClass("time-start")){
+						$(el.target).parents(".ext-daterange").find(".time-end input").datepicker( 'setStartDate',value);
+					}else{
+						$(el.target).parents(".ext-daterange").find(".time-start input").datepicker( 'setEndDate',value);
+					}
+				});
+				$(e).find(".input-group-addon").click(function(){
+					$(this).parent().find("input").datepicker("show");
+				});
+			}else{
+				$(e).find(".time-picker").daterangepicker(datepicker);
+				$(e).find(".time-picker .sui-input").on('change',function(el){
+					var input = $(this);
+					var value = input.sui().getValue();
+					if(input.hasClass("time-start")){
+						input.parents(".ext-daterange").find(".time-end").parent().data('daterangepicker').minDate=value?moment(value):false;
+					}else{
+						input.parents(".ext-daterange").find(".time-start").parent().data('daterangepicker').maxDate=value?moment(value):false;;
+					}
+				});
+				
+				if(!$(e).hasClass('datetime')){
+					$(e).find(".time-picker").on('hide.daterangepicker',function(ev, picker){
+						var input=$(ev.currentTarget).find(".sui-input");
+						var oldValue=input.data("value");
+						var newValue=picker.startDate.format($(e).attr("format"));
+						if(oldValue==newValue&&window.event.currentTarget!=document){
+							input.data("value","");
+							input.sui().setValue("");
+						}else{
+							input.data("value",newValue);
+							input.trigger("change");
+						}
+					});
+				}
+			}
+			e.extConfig={
+				setMode:function(editable){
+					SuiExt.setReadOnly($(e));
+					if(editable=="readOnly"){
+						$(e).find(".input-group-addon").hide();
+						$(e).find(".time-div ").css({width:"auto",float:"left"});
+						$(e).find(".time-div.time-connect").css({position:"relative"});
+						if(!datepicker.isDatepicker){
+							$(e).find(".time-picker").each(function(il,el){
+								$(el).data('daterangepicker').remove();
+							});
+						}
+					}
+				},
+				getValue:function(){
+					var startTime=$(e).find(".time-start").sui().getValue();
+					var endTime=$(e).find(".time-end").sui().getValue();
+					return [startTime,endTime];
+				},
+				setValue:function(value){
+					$(e).find(".time-start").data("value",value?value[0]:"");
+					$(e).find(".time-start").sui().setValue(value?value[0]:"");
+					$(e).find(".time-end").data("value",value?value[1]:"");
+					$(e).find(".time-end").sui().setValue(value?value[1]:"");
+					SuiExt.removeValidateClass($(e));
+				}
+			};
+		});
+	}
+	
+	//初始化时间控件
+	function initExtDate(domArr){
+		domArr.each(function(i,e){
+			var htmlStr='<div class="sui-input" name="'+$(e).attr("name")+'" mode="'+($(e).attr("mode")||"readOnly")+'" validate="{require:'+($(e).attr("require")||"false")+'}"></div>';
+			if($(e).attr("mode")=="editable"){
+				htmlStr+='<div class="input-group-addon"><i class="fa fa-calendar"></i></div>';
+			}
+			
+			var datepicker=creatDatepicker(e);
+			$(e).attr("suiext",true).addClass("input-group").html(htmlStr);
+			SUI.init(null,$(e));
+			
+			if(datepicker.isDatepicker){
+				$(e).find("input").datepicker(datepicker);
+				$(e).find(".input-group-addon").click(function(){
+					$(e).find("input").datepicker("show");
+				});
+			}else{
+				$(e).daterangepicker(datepicker);
+				
+				if(!$(e).hasClass('datetime')){
+					$(e).on('hide.daterangepicker', function(ev, picker) {
+						var oldValue=$(e).data("value");
+						var newValue=picker.startDate.format($(e).attr("format"));
+						if(oldValue==newValue&&window.event.currentTarget!=document){
+							$(e).ext().setValue("");
+						}else{
+							$(e).data("value",newValue);
+						}
+					});
+				}
+			}
+			e.extConfig={
+				getValue:function(){
+					return $(e).find(".sui-input").sui().getValue();
+				},
+				setValue:function(value){
+					$(e).data("value",value||"");
+					$(e).find(".sui-input").sui().setValue(value||"");
+					SuiExt.removeValidateClass($(e));
+				}
+			};
+		});
+	}
+	
+	//初始化单选按钮
+	function initExtRadio(domArr){
+		domArr.each(function(i,e){
+			e.extConfig={
+				getValue:function(){
+					return String($(e).find("li.checked").data("value"));
+				},
+				setValue:function(value){
+					$("li[data-value='"+value+"']").addClass("checked").siblings().removeClass("checked");
+				},
+				setDataSource:function(dataSource){
+					if((typeof dataSource=='object')&&dataSource.constructor==Array){
+						$(e).find("ul").empty();
+						dataSource.forEach(function(data,i){
+							var value="",name="";
+							if((typeof data=='string')&&data.constructor==String){
+								value=name=data;
+							}else{
+								value=data.value;
+								name=data.name;
+							}
+							$(e).find("ul").append("<li class='ext-radio-ul-li"+(value==$(e).attr("value")?" checked":"")+(i==0?" firstLi":"")+(i==dataSource.length-1?" lastLi":"")+"' data-value='"+value+"' title='"+name+"' style='width:"+(100/dataSource.length+"%")+";'>"+name+"</li>");
+						});
+						
+						$(e).find("li").click(function(){
+							$(this).addClass("checked").siblings().removeClass("checked");
+						});
+					}
+				}
+			};
+			
+			$(e).attr("suiext",true).html('<ul class="ext-radio-ul"></ul>');
+			if($(e).hasClass('wf-dict')){
+				var dataSource=[];
+				if($(e).attr('wf-type')&&dataSourceArr[$(e).attr('wf-type')]){
+					dataSource=dataSourceArr[$(e).attr('wf-type')];
+				}
+				
+				var temp=null;
+				if($(e).attr("additional")){
+					temp=JSON.parse($(e).attr("additional"));
+					temp.push.apply(temp,dataSource);
+				}else{
+					temp=dataSource;
+				}
+				$(e).ext().setDataSource(temp);
+			}else if($(e).attr('dataSource')){
+				$(e).ext().setDataSource(JSON.parse($(e).attr("dataSource")));
+			}
+		});
+	}
+	
+	//初始化开关组件
+	function initExtSwitch(domArr){
+		domArr.each(function(i,e){
+			e.extConfig={
+				mode:$(e).attr("mode"),
+				dataSource:$(e).attr("dataSource")?JSON.parse($(e).attr("dataSource")):["false","true"],
+				getValue:function(){
+					return $(e).find(".sui-hide").sui().getValue();
+				},
+				setValue:function(value){
+					var isOpen=$(e).hasClass("open");
+					if(this.dataSource.indexOf(value)==1){
+						$(e).addClass("open");
+						$(e).find(".sui-hide").sui().setValue(this.dataSource[1]);
+					}else{
+						$(e).removeClass("open");
+						$(e).find(".sui-hide").sui().setValue(this.dataSource[0]);
+					}
+					
+					if(isOpen!=$(e).hasClass("open")){
+						$(e).trigger("change");
+					}
+				},
+				setDataSource:function(dataSource){
+					this.dataSource=dataSource;
+					this.setValue(this.getValue());
+				},
+				setMode:function(mode){
+					if(mode=="editable"||mode=="readOnly"||mode=="disabled"){
+						this.mode=mode;
+						$(e).attr("mode",mode);
+					}
+				},
+				onClick:function(){
+					if(this.mode!="editable"){
+						return;
+					}
+					
+					if($(e).hasClass("open")){
+						$(e).removeClass("open");
+						$(e).find(".sui-hide").sui().setValue(this.dataSource[0]);
+					}else{
+						$(e).addClass("open");
+						$(e).find(".sui-hide").sui().setValue(this.dataSource[1]);
+					}
+					
+					$(e).trigger("change");
+				}
+			};
+			
+			$(e).attr("suiext",true).html('<div class="sui-hide"'+($(e).attr("name")?' name="'+$(e).attr("name")+'"':'')+'></div>');
+			SUI.init(null,$(e));
+			e.extConfig.setValue($(e).attr("value")?$(e).attr("value"):e.extConfig.dataSource[0]);
+			
+			$(e).click(function(){
+				e.extConfig.onClick();
+			});
+		});
+	}
+	
+	//初始化机构选择树
+	function initOrgTree(domArr){
+		if(domArr.length>0&&$(".orgTree[suiext='true']").length==0){
+			$("body").click(function(){
+				$(".dropdown-tree").css('display','none');
+			});
+			if(!$.fn.zTree){
+				$("<link>").attr({
+					rel: "stylesheet",
+					type: "text/css",
+					href: __basePath + '_libs/plugins/zTree/css/zTreeStyle/zTreeStyle.css'
+				}).appendTo("head");
+				$.getScript(__basePath + '_libs/plugins/zTree/js/jquery.ztree.all.js',function(){
+					orgTreeInit();
+				});
+			}else{
+				orgTreeInit();
+			}
+		}else{
+			orgTreeInit();
+		}
+		function orgTreeInit(){
+			domArr.each(function (i,e){
+				if($(e).attr("suiext")!="true"){
+					var htmlStr='<div class="dropdown-menu dropdown-tree">'
+							   +'<div class="ztree_searchInput_div"><input class="form-control" placeholder="请输入部门名称..."/></div>'
+							   +'<ul class="ztree"></ul></div>'
+							   +($(e).attr("orgid")?'<div name="'+$(e).attr("orgid")+'" class="sui-hide"></div>':'')
+							   +'<div mode="editable" name="'+$(e).attr("orgname")+'" validate="{require:'+($(e).attr("require")||"true")+'}" class="sui-input disabled" suffix="选择"></div>'
+							   +'<div class="orgTree_detele_btn_div"><i class="fa fa-close orgTree_detele_btn"></i></div>';
+					
+					$(e).attr("suiext","true").addClass("input-group").append(htmlStr);
+					SUI.init(null,$(e));
+					
+					var id="org-ztree-"+$(".ztree").length;
+					var tree=$(e).find(".dropdown-tree");
+					var outer=null;
+					var setting={
+						async:{
+							enable: true,
+							url: "com.sudytech.portalone.base.db.queryOrganization.biz.ext",
+							autoParam:["id"],
+							dataFilter:function(treeId,parentNode,responseData){
+								return responseData.lis;
+							}
+						},
+			      		callback:{
+							onClick: function(event, treeId, treeNode){
+								$(e).ext().setValue(treeNode);
+								parseFunction.call(e,$(e).attr("onAfterSelected"));
+								tree.css('display','none');
+							}
+						}
+					};
+					tree.find(".ztree_searchInput_div").click(function(event){
+						event.stopPropagation();
+					}).find("input").keyup(function(){
+						var _this=this;
+						clearTimeout(outer);
+						outer=setTimeout(function(){
+							var inputValue=_this.value.trim();
+							if(inputValue){
+								SuiExt.post("com.sudytech.work.process.processUtil.getEntitiesByCriteria.biz.ext",{
+									params:[{operate:"like",name:"name",value:"%"+inputValue+"%"}],
+									entity:'com.sudytech.work.process.org.org.TOrg'
+								},function(data){
+									var orgArr=[];
+									if(data.result&&data.result.list.length>0){
+										data.result.list.forEach(function(val){
+											val.isParent=val.tOrgs&&val.tOrgs.length>0?true:false;
+											orgArr.push(val);
+										});
+									}
+									if(orgArr.length>0){
+										$.fn.zTree.init($("#"+id),setting,orgArr);
+									}else{
+										$.fn.zTree.init($("#"+id),null);
+									}
+								});
+							}else{
+								$.fn.zTree.init($("#"+id),setting);
+							}
+						},500);
+					});
+					tree.find("ul").attr("id",id).click(function(event){
+						event.stopPropagation();
+					});
+					
+					$(e).find(".sui-input").click(function (event){
+						event.stopPropagation();
+						tree.css('display','block');
+					});
+					
+					$(e).find(".orgTree_detele_btn").click(function(event){
+						event.stopPropagation();
+						$(e).ext().setValue("");
+						
+					});
+					$.fn.zTree.init($("#"+id),setting);
+					
+					e.extConfig={
+						setMode:function (mode){
+							setArrMode($(e),mode);
+							if(mode=="readOnly"){
+								$(e).find(".sui-input").unbind('click');
+								$(e).find(".value-text .value")[0].nextSibling.data="";
+								$(e).find(".orgTree_detele_btn_div").hide();
+								$(e).attr("mode",mode);
+							}else if(mode=="editable"){
+								$(e).attr("mode",mode);
+								if($(e).ext().getValue()){
+									$(e).find(".orgTree_detele_btn_div").show();
+								}
+								$(e).find(".sui-input").click(function (event){
+									event.stopPropagation();
+									$(event.target).parent().parent().parent().find(".dropdown-tree").css('display','block');
+								});
+							}
+						},
+						getValue:function (){
+							return e.dataValue;
+						},
+						setValue:function (value){
+							e.dataValue=value;
+							$(e).find(".sui-input").attr("title",value?value.name:"").sui().setValue(value?value.name:"");
+							
+							if($(e).find(".sui-hide").length>0){
+								$(e).find(".sui-hide").sui().setValue(value?value.id:"");
+							}
+							
+							if(value&&$(e).attr("mode")!="readOnly"){
+								$(e).find(".orgTree_detele_btn_div").show();
+							}else{
+								$(e).find(".orgTree_detele_btn_div").hide();
+							}
+							
+							SuiExt.removeValidateClass($(e));
+						}
+					};
+				} 
+			});
+		}
+	}
+	
+	//为sui控件扩展属性和方法
+	function extSuiDom(domArr){
+		domArr.each(function (i,e){
+			if($(e).attr("sui")=="true"&&!$(e).hasClass('sui-form')&&$(e).attr("suiext")!="true"){
+				$(e).attr("suiext","true");
+				$(e).sui().setMode=function (mode){
+					setConfigProperty($(e),"mode",mode);
+				};
+				if($(e).hasClass('sui-fileupload')&&$(e).attr('charLength')){
+					var length=$(e).attr('charLength');
+					if($(e).sui().getValue()){
+						var obj=null;
+						obj=setInterval(function(){
+							if($(e).find("a").length>0){
+								$(e).find("a").css("width",length).each(function(i,e){
+									$(e).attr('title',$(e).text());
+								});
+								clearInterval(obj);
+							}
+						},10);
+					}
+					$(e).change(function (){
+						$(e).find('a').css("width",length).each(function (il,el){
+							$(el).attr('title',$(el).text());
+						});
+					});
+				}else if($(e).hasClass('sui-date')&&$(e).attr('endTime-for')&&$($(e).attr('endTime-for')).length>0&&$($(e).attr('endTime-for')).hasClass('sui-date')&&$($(e).attr('endTime-for')).attr("sui")=="true"){
+					var regEx = new RegExp("\\-","gi");
+					$($(e).attr('endTime-for')).change(function() {
+						var minTime =Date.parse($($(e).attr('endTime-for')).sui().getValue().replace(regEx,"/"))+Number($(e).attr('delay')||'0')*24*60*60*1000;
+						setMinTime($(e),minTime);
+					});
+					$(e).change(function (){
+						var maxTime =Date.parse($(e).sui().getValue().replace(regEx,"/"))-Number($(e).attr('delay')||'0')*24*60*60*1000;
+						setMaxTime($($(e).attr('endTime-for')),getMaxTime($("div[endTime-for='"+$(e).attr("endTime-for")+"']"),maxTime));
+					});
+					/*$("body").delegate($(e).attr('endTime-for'),"hide.daterangepicker",function(){
+						var minTime =Date.parse($($(e).attr('endTime-for')).sui().getValue().replace(regEx,"/"))+Number($(e).attr('delay')||'0')*24*60*60*1000;
+						setMinTime($(e),minTime);
+					});
+					$("body").delegate($(e),"hide.daterangepicker",function(){
+						var maxTime =Date.parse($(e).sui().getValue().replace(regEx,"/"))-Number($(e).attr('delay')||'0')*24*60*60*1000;
+						setMaxTime($($(e).attr('endTime-for')),getMaxTime($("div[endTime-for='"+$(e).attr("endTime-for")+"']"),maxTime));
+					});*/
+				}else if($(e).hasClass('sui-select')||$(e).hasClass('sui-multiselect')){
+					$(e).sui().setDataSource=function (dataSource){
+						setConfigProperty($(e),"properties.dataSource",dataSource);
+					};
+					$(e).sui().getDataSource=function (){
+						var dataSource=$(e).sui().getConfig().properties.dataSource;
+						dataSource.get=function (){
+							var index=-1;
+							if($(e).hasClass('sui-select')&&$(e).attr("selectstyle")=="radio"){
+								index=$(e).find("input").index($(e).find("input:checked"));
+							}else if($(e).hasClass('sui-select')&&$(e).attr("selectstyle")!="radio"){
+								index=$(e).find("select option[value!='$noValue$']").index($(e).find("select option[value!='$noValue$']:selected"));
+							}
+							if(index!=-1){
+								return dataSource[index];
+							}else{
+								return "";
+							}
+						};
+						return dataSource;
+					};
+					$(e).sui().getData=function (){
+						return $(e).sui().getDataSource().get();
+					};
+					if($(e).hasClass('wf-dict')&&$(e).attr('wf-type')&&dataSourceArr[$(e).attr('wf-type')]){
+						var temp=null;
+						if($(e).attr("additional")){
+							temp=JSON.parse($(e).attr("additional"));
+							temp.push.apply(temp,dataSourceArr[$(e).attr('wf-type')]);
+						}else{
+							temp=dataSourceArr[$(e).attr('wf-type')];
+						}
+						$(e).sui().setDataSource(temp);
+					}
+					
+					if(!$(e).hasClass('wf-dict')&&$(e).attr("businessdata")&&businessDataArr[$(e).attr("businessdata")]){
+						var temp=null;
+						if($(e).attr("additional")){
+							temp=JSON.parse($(e).attr("additional"));
+							temp.push.apply(temp,businessDataArr[$(e).attr('businessdata')]);
+						}else{
+							temp=businessDataArr[$(e).attr('businessdata')];
+						}
+						$(e).sui().setDataSource(temp);
+					}
+				}
+			}else if($(e).attr("sui")!="true"){
+				SUI.build($(e).get(0));
+				if($(e).attr("sui")=="true"){
+					extSuiDom($(e));
+				}
+			}
+		});
+	}
+	
+	//初始化保存草稿按钮
+	function initExtDraftBtn(){
+		var process=getParameter("process");
+		if(process){
+			$(".ext_draft").html("<a class='btn btn-primary'>保存草稿</a>").click(function(){
+				var suiForm=$("#form").length==1?$("#form"):$(".sui-form");
+				var obj={entity:suiForm.sui().getValue(),title:wf2.workflow.processDef.processChName};
+				$(".ext_draft").trigger("onBeforeDraft",[obj]);
+				
+				if(obj.confirmSave!==false){
+					SuiExt.post("com.sudytech.portalone.base.draft.draftService.saveDraft.biz.ext",{
+						title:obj.title,
+						creatorId:wf2.workflow.userObject.userId,
+						creatorName:wf2.workflow.userObject.userName,
+						process:wf2.workflow.processDef.processDefName,
+						entity:JSON.stringify(obj.entity),
+						draftId:getParameter("draftId")
+					},function(data){
+						if(data.exception){
+							alert("保存草稿失败！");
+						}else{
+							layer.alert('保存草稿成功！',{icon: 1, title:'提示',closeBtn: 0},function(index){
+								$(".ext_draft").trigger("onAfterDraft",[data]);
+								layer.close(index);
+							});
+						}
+					});
+				}
+			});
+		}else{
+			$(".ext_draft").hide();
+		}
+	}
+	
+	//初始化关闭按钮
+	function initExtCloseWindowBtn(){
+		$(".ext-closewindow").html("<a class='btn btn-default'>"+($(".ext-closewindow").attr("btnText")||"关闭")+"</a>").click(function(){
+			var obj={confirmClose:true};
+			$(".ext-closewindow").trigger("onBeforeClose",[obj]);
+			if(obj.confirmClose){
+				SuiExt.closeWindow(false);
+			}
+		});
+	}
+	
+	//初始化导出按钮
+	function initExtExportBtn(){
+		$(".ext-export").click(function(){
+			var params=[];
+			$(".paramsForm div[field]").each(function(i,e){
+				var field=$(e).attr("field");
+				var value=$(e).sui().getValue();
+				if(field&&value){
+					params.push({name:field,value:value,operate:$(e).attr("operate")||"EQ"});
+				}
+			});
+			
+			var obj={params:params};
+			$(this).trigger("onBeforeExport",[obj]);
+			if(obj.confirmExport!==false){
+				SuiExt.exportExcel("com.sudytech.work.process.exportconfig.exportService.downExcel.biz.ext",$(this).attr("businesscode"),obj.params,$(this).attr("maxLine"),$(this).attr("maxSheet"));
+			}
+		}).each(function(i,e){
+			$(e).html("<a class='btn btn-primary btn-sm'>"+($(e).attr("btnText")||"导出")+"</a>");
+		});
+	}
+	
+	//加载自定义提示框
+	function loadPromptBox(){
+		var process=getParameter("process");
+		if(process){
+			SuiExt.post("com.sudytech.work.process.prompt.promptService.getPromptByCode.biz.ext",{
+				businesscode:process
+			},function(data){
+				if(data.prompt){
+					if(!window.promptBox){
+						$.getScript(__contextPath+'/work/process/js/promptBox.js',function(){
+							promptBox.init(data.prompt);
+						});
+					}else{
+						promptBox.init(data.prompt);
+					}
+				}
+			});
+		}
+	}
+	
+	//加载字典表数据
+	function loadDict(dom){
+		var dictTypes=[];
+		dom.each(function (i,e){
+			if($(e).attr('wf-type')&&($(e).attr("sui")!=true||!$(e).sui().getConfig().properties.dataSource||$(e).sui().getConfig().properties.dataSource.length==0)){
+				dictTypes.push($(e).attr('wf-type'));
+			}
+		});
+		
+		if(dictTypes.length==0){
+			return;
+		}
+		SuiExt.loadDict(dictTypes, function(data){
+			data.options.forEach(function (val){
+				if(!dataSourceArr[val.TYPE]){
+					dataSourceArr[val.TYPE]=[];
+				}
+				dataSourceArr[val.TYPE].push({name:val.NAME,value:val.VALUE});
+			});
+		},false);
+	}
+	
+	//加载业务数据
+	function loadBusinessData(dom){
+		var keys=[];
+		dom.each(function (i,e){
+			var key=$(e).attr('businessdata');
+			if(key&&keys.indexOf(key)==-1&&$(e).attr("suiext")!="true"){
+				keys.push(key);
+			}
+		});
+		
+		if(keys.length>0){
+			SuiExt.post("com.sudytech.work.process.business.businessService.getBusinessData.biz.ext",{
+				keys:keys
+			},function(data){
+				var businessData=data.businessData;
+				if(businessData){
+					for(var key in businessData){
+						if(!businessDataArr[key]){
+							businessDataArr[key]=[];
+						}
+						businessData[key].forEach(function(val){
+							businessDataArr[key].push({name:val.mc,value:val.dm});
+						});
+					}
+				}
+			},false);
+		}
+	}
+	
+	//批量设置sui控件的mode属性
+	function setArrMode(domArr,mode){
+		domArr.each(function (i,e){
+			if($(e).sui()&&!$(e).hasClass('sui-form')&&!$(e).hasClass('sui-hide')){
+				setConfigProperty($(e),"mode",mode);
+			}else{
+				domArr.find(suiElement).each(function (il,el){
+					if($(el).sui()&&!$(el).hasClass('sui-form')&&!$(el).hasClass('sui-hide')){
+						setConfigProperty($(el),"mode",mode);
+					}
+				});
+			}
+		});
+	}
+	
+	//设置sui控件的config的属性值
+	function setConfigProperty(suiDomArr,property,value){
+		suiDomArr.each(function(i,e){
+			var suiDom=$(e);
+			var config = suiDom.sui().getConfig();
+			if(!config){
+				return;
+			}
+			if(property.indexOf(".")!=-1){
+				var propertyArr=property.split(".");
+				if(!config[propertyArr[0]]){
+					config[propertyArr[0]]={};
+				}
+				config[propertyArr[0]][propertyArr[1]]=value;
+				if(property=="validate.require"||property=="dateRange.minDate"||property=="dateRange.maxDate"){
+					config.value=suiDom.sui().getValue();
+				}
+			}else{
+				config[property]=value;
+				if(property=="validate"||value=="readOnly"){
+					config.value=suiDom.sui().getValue();
+				}else if(value=="hide"){
+					config.value="";
+				}
+			}
+			suiDom.sui().setConfig(config);
+			if(value=="editable"||value=="readOnly"){
+				suiDom.show();
+			}else if(value=="hide"){
+				suiDom.removeClass(SUI.Util.validateClass()).tooltip('hide');
+			}
+		});
+	}
+	
+	//设置sui时间控件的最小可选时间	
+	function setMinTime(dom,minTime){
+		//setConfigProperty(dom,"dateRange.minDate",moment(minTime));
+		var endTime=dom.find(".date-picker").data('daterangepicker');
+		endTime.minDate=moment(minTime);
+		if(minTime > endTime.startDate.valueOf()){
+			endTime.setStartDate(moment(minTime));
+		}
+		if(!dom.sui().getValue()&&$("div[endTime-for='#"+dom.attr("id")+"']").length>0){
+			$("div[endTime-for='#"+dom.attr("id")+"']").each(function (i,e){
+				var minTim2=minTime+Number($(e).attr('delay')||'0')*24*60*60*1000;
+				setMinTime($(e),minTim2);
+			});
+		}
+	}
+	
+	//设置sui时间控件的最大可选时间
+	function setMaxTime(dom,maxTime){
+		//setConfigProperty(dom,"dateRange.maxDate",moment(maxTime));
+		var startTime=dom.find(".date-picker").data('daterangepicker');
+		startTime.maxDate=moment(maxTime);
+		if(maxTime < startTime.startDate.valueOf()){
+			startTime.setStartDate(moment(maxTime));
+		}
+		if(!dom.sui().getValue()&&$(dom.attr("endTime-for")).length>0){
+			$(dom.attr("endTime-for")).each(function (i,e){
+				var maxTime2=maxTime-Number(dom.attr('delay')||'0')*24*60*60*1000;
+				setMaxTime($(e),getMaxTime($("div[endTime-for='"+dom.attr("endTime-for")+"']"),maxTime2));
+			});
+		}
+	}
+	
+	//获取最大时间的最小值
+	function getMaxTime(domArr,maxTime){
+		var regEx = new RegExp("\\-","gi");
+		domArr.each(function(i,e){
+			var maxTimeTemp=Date.parse($(e).sui().getValue().replace(regEx,"/"))-Number($(e).attr('delay')||'0')*24*60*60*1000;
+			maxTime=!isNaN(maxTimeTemp)&&maxTimeTemp<maxTime?maxTimeTemp:maxTime;
+		});
+		return maxTime;
+	}
+	
+	//格式化小数位
+	function fomatNum(src,pre,ROUND){
+		pre=pre===0?0:Number(pre||2);
+		var num=BigNumber(src).dp(pre,ROUND||BigNumber.ROUND_HALF_EVEN).toString();
+		
+		if(pre==0){
+			return num;
+		}
+		
+		var z="";
+		for(var i=0;i<pre;i++){
+			z+="0";
+		}
+		num += num.indexOf('.')==-1?("."+z):z;
+		num = num.substring(0,num.indexOf('.')+pre+1);
+		return num;
+	}
+	
+	//数字转中文
+	function numToChinese(money){
+		var cnNums = new Array('零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖');
+		var cnIntRadice = new Array('', '拾', '佰', '仟');
+		var cnIntUnits = new Array('', '万', '亿', '兆');
+		var cnDecUnits = new Array('角', '分', '毫', '厘');
+		var cnInteger = '整';
+		var cnIntLast = '元';
+		var maxNum = 999999999999999.9999;
+		var integerNum;
+		var decimalNum;
+		var chineseStr = '';
+		var parts;
+		if(money == ''){ 
+			return ''; 
+		}
+		money = parseFloat(money);
+		if(money >= maxNum){
+			return '';
+		}
+		if(money == 0){
+			chineseStr = cnNums[0] + cnIntLast + cnInteger;
+			return chineseStr;
+		}
+		money = money.toString();
+		if(money.indexOf('.') == -1){
+			integerNum = money;
+			decimalNum = '';
+		}else{
+			parts = money.split('.');
+			integerNum = parts[0];
+			decimalNum = parts[1].substr(0, 4);
+		}
+		if(parseInt(integerNum, 10) > 0){
+			var zeroCount = 0;
+			var IntLen = integerNum.length;
+			for(var i = 0; i < IntLen; i++){
+				var n = integerNum.substr(i, 1);
+				var p = IntLen - i - 1;
+				var q = p / 4;
+				var m = p % 4;
+				if(n == '0'){
+					zeroCount++;
+				}else{
+					if(zeroCount > 0){
+						chineseStr += cnNums[0];
+					}
+					zeroCount = 0;
+					chineseStr += cnNums[parseInt(n)] + cnIntRadice[m];
+				}
+				if(m == 0 && zeroCount < 4){
+					chineseStr += cnIntUnits[q];
+				}
+			}
+			chineseStr += cnIntLast;
+		}
+		if(decimalNum != ''){
+			var decLen = decimalNum.length;
+			for (var i = 0; i < decLen; i++){
+				var n = decimalNum.substr(i, 1);
+				if (n != '0') {
+					chineseStr += cnNums[Number(n)] + cnDecUnits[i];
+				}
+			}
+		}
+		if(chineseStr == ''){
+			chineseStr += cnNums[0] + cnIntLast + cnInteger;
+		}else if (decimalNum == ''){
+			chineseStr += cnInteger;
+		}
+		return chineseStr;
+	}
+	
+	//修改URL参数值
+	function changeURLArg(url,arg,arg_val){
+		var pattern=arg+'=([^&]*)';
+		var replaceText=arg+'='+arg_val;
+		if(url.match(pattern)){
+	    	var tmp='/('+arg+'=)([^&]*)/gi';
+	    	tmp=url.replace(eval(tmp),replaceText);
+	    	return tmp;
+		}else{
+			if(url.match('[\?]')){
+				return url+'&'+replaceText;
+			}else{
+				return url+'?'+replaceText;
+			}
+		}
+		return url + '\n' + arg + '\n' + arg_val;
+	}
+	
+	//获取url请求中包含的参数
+	function getParameter(key){
+		var reg = new RegExp('(^|&)'+key+'=([^&]*)(&|$)');
+		var value = window.location.search.substr(1).match(reg);
+		return value?unescape(value[2]):null;
+	};
+	
+	//加载css样式文件
+	function loadStyle(href){
+		$("<link>").attr({
+			rel:"stylesheet",
+			type:"text/css",
+			href:href,
+		}).appendTo("head");
+	}
+	
+	//加载js文件
+	function loadScript(url){
+		$.ajax({
+			url:url,
+			type:'get',
+			async:false,
+			contentType:"script"
+		});
+	}
+	
+	//绑定拖拽事件
+	function bindDragEvent(dom,box,dragDom){
+		var disL,disT;
+		var drag=false;
+		box=box||$("body")[0];
+		dragDom=dragDom||dom;
+		dragDom.style.cursor="move";
+		dragDom.onmousedown=function(e){
+			var event=e||window.event;
+			drag=true;
+			disL=event.clientX-dom.offsetLeft;
+			disT=event.clientY-dom.offsetTop;
+			
+			box.onmousemove=function(e){
+				var event=e||window.event;
+				if(drag){
+					dom.style.left=event.clientX-disL+"px";
+					dom.style.top=event.clientY-disT+"px";
+				}
+			};
+		};
+		dragDom.onmouseup=function(){
+			drag=false;
+		};
+	}
+	
+	function parseFunction(fun){
+		if(fun){
+			eval(fun);
+		}
+	}
+})();

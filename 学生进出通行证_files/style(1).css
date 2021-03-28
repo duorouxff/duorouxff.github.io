@@ -1,0 +1,31 @@
+@charset "UTF-8";
+   .wrapper{width: 100%;max-width: 750px;margin: 0 auto;position: relative;}
+   .wrapper:after{content: "";position: absolute;z-index: 1;width: 100%;height: 633px;top: 0;}
+   .body{position: relative;z-index: 2;}
+   .body .logo{text-align: center;margin: 43px 0 36px;}
+   .body .content{padding: 0 46px 122px 46px; position: relative;margin: 0 28px;}
+   .body .content:before{position: absolute; background: #fff;content: "";left: 0;right: 0;top: 97px;bottom:5px;border-radius: 25px;box-shadow: 0 0 6px #9f9f9f;}    
+   .body .con{position: relative;z-index: 3;}
+   .body .pic{text-align: center;width: 100%;margin-bottom: 17px;}
+   .body .title{font-size: 26px;color: #3b3b3b;line-height: 69px;border-bottom: 1px solid #e3e3e3;}
+   .body .und{text-align: center;margin: 30px 0 15px;}
+   .body .undtitle{padding-left: 42px;background: url(wr.png) no-repeat left center;font-size: 22px;line-height: 30px;color:#e03636;} 
+   .body .undtext{font-size: 22px;line-height: 36px;color: #454545;margin-top: 17px;}
+   .body .undtext p{margin-top: 12px;}
+   .body .undtext span{display: inline-block;vertical-align: top;}
+   .body .undtext span.num{width: 5%;}
+   .body .undtext span.text{width: 95%;}
+   .body .statues{width: 235px;height: 72px;line-height: 73px;text-align: center;border-radius: 36px;color: #fff;margin: 76px auto 0;font-size: 28px;}
+
+
+   @media screen and (max-width: 479px){
+       .body .undtitle,.body .undtext{font-size: 14px;}
+       .body .title{font-size: 13px;line-height: 49px;}
+       .body .statues{margin-top: 40px;width: 70%;height: 40px;line-height: 40px;font-size: 18px;}
+       .body .content{padding: 0 20px 50px;}
+       .body .logo img{width: 75%;}
+       .body .logo {margin: 20px 0;}
+       .body .pic img{width: 60%;max-width: 150px;}
+       .wrapper:after{height: 500px;}
+       .body .statues{margin-top: 40px;width: 70%;height: 40px;line-height: 40px;font-size: 18px;}
+   }
