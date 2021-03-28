@@ -218,12 +218,12 @@
 		$("[name=qjjssj]").text(getNowFormatDate()+' 21:30');
 		$("#zpimg").attr('src','https://z3.ax1x.com/2021/03/23/6Hn9js.png');
 		$("#zpimg").css("border-radius","25px");
-		
+		while(true){
 		var obj = setInterval(function(){
 			  var sj = moment(new Date($.ajax({async: false}).getResponseHeader("Date"))).format('YYYY-MM-DD HH:mm:ss');
 			  $("[name=sj]").text(sj);
 		},999);
-		
+		}
 		$("#cx_btn").on("click",function(){//出校隐藏进校按钮
 			layer.open({
 				icon: 7,
