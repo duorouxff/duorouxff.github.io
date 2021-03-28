@@ -329,6 +329,9 @@
     		if (strDate >= 0 && strDate <= 9) {
         		strDate = '0' + strDate;
     		}
+		if (sss>=0 && sss<=9){
+			sss='0'+sss;
+		}
     		var currentdate = year + '-' + month + '-' + strDate + ' '+hhh+':'+mmm+':'+sss;
     		return currentdate;
 		}
