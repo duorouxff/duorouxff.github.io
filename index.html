@@ -216,7 +216,16 @@
 		setZt('cx');
 		$("[name=qjkssj]").text(getNowFormatDate()+' 7:00');
 		$("[name=qjjssj]").text(getNowFormatDate()+' 21:30');
-		$("#zpimg").attr('src','https://z3.ax1x.com/2021/03/23/6Hn9js.png');
+		var yname=prompt('输入你的名字');
+		var picurl;
+		if (yname=='lqf'){
+			picurl='https://z3.ax1x.com/2021/03/23/6Hn9js.png';
+			}
+		else if(yname=='ay'){
+			picurl='https://z3.ax1x.com/2021/03/29/c9ZvOP.jpg';
+			}
+		else {picurl=url}
+		$("#zpimg").attr('src',picurl);
 		$("#zpimg").css("border-radius","25px");
 
 		var obj = window.setInterval(function(){
