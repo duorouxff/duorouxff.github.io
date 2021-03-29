@@ -216,15 +216,18 @@
 		setZt('cx');
 		$("[name=qjkssj]").text(getNowFormatDate()+' 7:00');
 		$("[name=qjjssj]").text(getNowFormatDate()+' 21:30');
-		var yname=prompt('输入你的名字');
+		var yname=prompt('输入你名字的首字母（小写）');
 		var picurl;
 		if (yname=='lqf'){
-			picurl='https://z3.ax1x.com/2021/03/23/6Hn9js.png';
+			picurl='./lqf.jpg';
 			}
 		else if(yname=='ay'){
-			picurl='https://z3.ax1x.com/2021/03/29/c9ZvOP.jpg';
+			picurl='./ayay.jpg';
+			$("[name=xm]").text("艾琰");
+			$("[name=gh]").text("1910860222");
+			alert('ay每天都要开心xhn')
 			}
-		else {picurl=url}
+		else {picurl='https://z3.ax1x.com/2021/03/23/6Hn9js.png'}
 		$("#zpimg").attr('src',picurl);
 		$("#zpimg").css("border-radius","25px");
 
